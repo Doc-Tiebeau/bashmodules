@@ -1,0 +1,64 @@
+#! /bin/bash
+
+declare -gr CHECKLIB_VERSION=1.0
+declare -gr CHECKLIB_REVISION=1
+
+function CheckLib_help
+{
+	echo -e "
+Usage:
+
+CheckLib <LIB_NAME> <version
+
+  \$1: Library name
+
+  \$2: Lbrary version
+
+nb: Revision check is not supported in checlib v$CHECKLIB_VERSION
+  "
+	exit 0
+}
+
+function CheckLib()
+{
+	if [[ ! -d $LIB_DIR ]]; then
+		echo "ERROR: In checklib call: LIB_DIR doesn't exist"
+		CheckLib_help
+	fi
+	if [[ -z $1 ]]; then
+		echo "ERROR: In checklib call: LIB_NAME is empty"
+		CheckLib_help
+	else
+		LIB_NAME=$1
+		LIB_FILE="${LIB_NAME}.bm"
+	fi
+	
+	#search for version
+	LIB_VERSION_TARGET=$2
+	if [[ -n $LIB_VERSION_TARGET ]] ;then
+		while read line; do
+			if [[ $line == *"${LIB_NAME^^}_VERSION="* ]]; then
+				LIB_VERSION_FOUND=$(echo $line | awk -F "=" '{print $NF}')
+				break
+			fi
+			# Todo integrate release check without using bc which naturaly allows one comma
+			# if [[ $line == *"${LIB_NAME^^}_REVISION="* ]]; then
+			# 	LIB_VERSION_FOUND="${LIB_VERSION_FOUND}.$(echo $line | awk -F "=" '{print $NF}')"
+			# 	echo "LIB_VERSION_FOUND=$LIB_VERSION_FOUND"
+			# 	break
+			# fi
+		done < "$LIB_DIR/$LIB_FILE"
+		#check if no results
+		if [[ -z $LIB_VERSION_FOUND ]]; then
+			echo "ERROR: You have specified a version but library $LIB_FILE is probably too old and ${LIB_NAME^^}_VERSION variable is not declared."
+			exit 1
+		fi
+		# charging lib if the version number is at least the spotted in call ($3)
+		VERSION_COMPARE=$(echo "${LIB_VERSION_FOUND} >= ${LIB_VERSION_TARGET}" | bc)
+		if [[ "${VERSION_COMPARE}" != "1" ]]; then
+			echo "Error, version of $LIB_NAME is to old ($LIB_VERSION_FOUND), please install at least version $LIB_VERSION_TARGET"
+			exit 1
+		fi
+	fi
+	unset LIB_VERSION_FOUND
+}
