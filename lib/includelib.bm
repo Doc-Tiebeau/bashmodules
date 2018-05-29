@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+#This bash module is to manage include of all other bashmodules and check version constraints.
+
+declare -gr INCLUDELIB_VERSION=2.0
+declare -gr INCLUDELIB_REVISION=2
+
+if [ -z $LIB_DIR ]; then
+{
+	LIB_DIR="/usr/local/lib"
+}; fi
+
+function IncludeLib_help()
+{
+	echo -e "
+IncludeLib version $INCLUDELIB_VERSION
+
+Usage:
+
+Declare LIB_DIR variable in your main script to point library directory which contains bash modules.
+
+
+
+"
+	exit 0
+}
+
+function IncludeLib_all()
+{
+	while read -r FILE; do # process file by file
+		source "$LIB_DIR/$FILE"
+	    let i=$i+2
+	    let j=$j+1
+	done < <( /bin/ls -1 $LIB_DIR/*".bm" | grep -sv "includelib.bm" | awk -F "/" '{print $NF}' )
+
+	unset i j line
+}
+
+function IncludeLib_file()
+{
+	LIB_FILE=$1
+	#set the file name and the lib name even if .bm is missing
+	if [[ $(echo $LIB_FILE | awk -F "." '{print $NF}') != "bm" ]]; then
+		LIB_NAME=$LIB_FILE
+		LIB_FILE="${LIB_FILE}.bm"
+	else
+		LIB_NAME=$(echo $LIB_FILE | awk -F "." '{$(NF--); print}')
+	fi
+
+	if [[ ! -f "$LIB_DIR/$LIB_FILE" ]]; then
+		echo "ERROR: $LIB_DIR/$LIB_FILE library does not exists !"
+		exit 1
+	fi
+	if [[ $LIB_FILE ==  *"includelib"* ]]; then
+		echo "ERROR: Please don't include includelib itself..."
+		IncludeLib_help
+	fi
+
+	#search for version
+	LIB_VERSION_TARGET=$2
+	if [[ -n $LIB_VERSION_TARGET ]] ;then
+		while read line; do
+			if [[ $line == *"declare"*"${LIB_NAME^^}_VERSION="* ]]; then
+				echo "[DEBUG]: LibLine=$line"
+				LIB_VERSION_FOUND=$(echo $line | awk -F "=" '{print $NF}')
+			fi
+			# Todo integrate release check without using bc which naturaly allows one comma
+			# if [[ $line == *"${LIB_NAME^^}_REVISION="* ]]; then
+			# 	LIB_VERSION_FOUND="${LIB_VERSION_FOUND}.$(echo $line | awk -F "=" '{print $NF}')"
+			# 	echo "LIB_VERSION_FOUND=$LIB_VERSION_FOUND"
+			# 	break
+			# fi
+		done < "$LIB_DIR/$LIB_FILE"
+		#check if no results
+		if [[ -z $LIB_VERSION_FOUND ]]; then
+			echo "ERROR: You have specified a version but library $LIB_FILE is probably too old and ${LIB_NAME^^}_VERSION variable is not declared."
+			exit 1
+		fi
+		# charging lib if the version number is at least the spotted in call ($3)
+		if [[ $(echo "$LIB_VERSION_FOUND >= $LIB_VERSION_TARGET" |bc) == 1 ]]; then
+			source	$LIB_DIR/$LIB_FILE
+		else
+			echo "Error, version of $LIB_NAME is to old ($LIB_VERSION_FOUND), please install at least version $LIB_VERSION_TARGET"
+			exit 1
+		fi
+	fi
+	unset LIB_VERSION_FOUND
+}
+
+function IncludeLib()
+{
+	case $1 in
+		-a|--all )
+			IncludeLib_all
+			;;
+		-f|--file )
+			# charging file with specified version or not
+			if [[ -n $3 ]]; then
+				IncludeLib_file $2 $3
+			elif [[ -n $2 ]]; then
+				IncludeLib_file $2
+			fi
+			;;
+
+		*)
+			IncludeLib_help
+			;;
+	esac
+}
