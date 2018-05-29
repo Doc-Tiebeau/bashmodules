@@ -1,4 +1,7 @@
-#! /bin/bash
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
 
 declare -gr CHECKLIB_VERSION=1.0
 declare -gr CHECKLIB_REVISION=1
