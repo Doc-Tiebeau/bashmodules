@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -gr FILLTABLE_VERSION=1.0
+declare -gr FILLTABLE_REVISION=2
+
+function FillTable()
+{
+
+	if [ -z $1 ] ; then
+	{
+		echo "Function FillTable require first argument as string list whitespace serparted to be inserted in array."
+		exit 0
+	}
+	elif [ -z $2 ]; then
+	{
+		echo "Function FillTable require an argument which is the array to be declared and filled with list entries."
+		exit 0
+	}; fi
+
+declare -i ARGNUM=0
+
+# LINE=$(echo $(cat $1) "\n")
+# echo "\$LINE=$LINE"; exit 0
+
+declare DONE="false"
+
+until $DONE ; do 
+
+	read LINE || DONE=true
+	
+	if [[ -z "$LINE" ]] || [[ "$(echo "$LINE" | grep "#")" ]]; then
+		{
+			continue
+		};fi
+	
+	declare -i NBARGS=$(echo "$LINE" | awk {'print NF'})
+
+# 	echo_debug 2 "
+# LINE=$LINE
+# NBARGS=$NBARGS
+# \$2=$2
+# "
+
+	if [ $NBARGS -le 0 ]; then
+	{
+		continue
+	}
+	elif [ $NBARGS -eq 1 ]; then
+	{
+		eval $(echo $2)[$ARGNUM]=$LINE
+		((ARGNUM++))
+		continue
+	}
+	elif [ $NBARGS -gt 1 ]; then
+	{
+		declare -i VALUENUM=1
+		while [ $VALUENUM -le $NBARGS ]; do
+		{	
+			# echo_debug 2 "VALUENUM=$VALUENUM"
+			eval $(echo $2)[$ARGNUM]=$(echo "$LINE" | awk '{print $"'$VALUENUM'"}')
+			((VALUENUM++))
+			((ARGNUM++))
+		}
+		done
+		continue
+	}
+	fi
+
+done < $1
+
+unset DONE
+}
