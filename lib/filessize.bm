@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -r FILESSIZE_VERSION=0.3
+declare -r FILESSIZE_REVISION=2
+
+
+function FilesSize_help()
+{
+	cat <<EOF
+FilesSize Help:
+
+Used to calculate the total size of a list of files and/or directories.
+
+	Usage:
+
+FilesSize [ --unit [B|KB|...] ] <File1|Directory1> <File2|Directory2> [...]
+
+-u | --unit Available size Units:
+		B  = Bytes
+		KB = KiloBytes
+		MB = MegaBytes
+		GB = GygaBytes
+		TB = TerraBytes
+		PB = PetaBytes
+		EB = ExaBytes
+
+EOF
+}
+
+function FilesSize_badarg()
+{
+  echo -e "Bad argument \"$1\" in FilesSize() call in $(pwd)/$(basename "$(echo "$0")")\n"
+  FilesSize_help
+  exit 1
+}
+
+function FilesSize()
+{
+	local UNIT="B"
+	TOTAL_SIZE=0
+	i=1
+
+	if [[ ${1} == "-u" || ${1} == "--unit" ]] && [[ ${2} =~ (^B|KB|MB|GB|TB|PB|EB) ]]; then
+		i=3
+		UNIT=${2}
+	fi
+
+	until [[ -z $(eval echo \$$i) ]]; do
+		ARG_NUM=$i
+		ARG_VALUE=$(eval echo \$$i)
+
+		if [[ -d $ARG_VALUE ]]; then
+			# echo -e "directory to check=$ARG_VALUE"
+			SIZE=$(du -bs $ARG_VALUE | awk -F " " '{print $1}')
+			TOTAL_SIZE=$((TOTAL_SIZE+SIZE))
+			# echo "Size of $ARG_VALUE=$SIZE"
+		elif [[ -f $ARG_VALUE ]]; then
+			# echo -e "file to check =$ARG_VALUE"
+			SIZE=$(du -ba $ARG_VALUE | awk -F " " '{print $1}')
+			TOTAL_SIZE=$((TOTAL_SIZE+SIZE))
+		else
+			FilesSize_badarg $ARG_VALUE
+		fi
+		i=$(( i + 1 ))
+		unset SIZE
+	done
+
+	case $UNIT in
+		B )
+			echo "$TOTAL_SIZE"" B"
+			;;
+		KB )
+			echo $(bc <<< 'scale=3; '$TOTAL_SIZE'/1024')" KB"
+			;;
+		MB )
+			echo $(bc <<< 'scale=3; '$TOTAL_SIZE'/1024^2')" MB"
+			;;
+		GB )
+			echo $(bc <<< 'scale=6; '$TOTAL_SIZE'/1024^3')" GB"
+			;;
+		TB )
+			echo $(bc <<< 'scale=6; '$TOTAL_SIZE'/1024^4')" TB"
+			;;
+		PB )
+			echo $(bc <<< 'scale=8; '$TOTAL_SIZE'/1024^5')" PB"
+			;;
+		EB )
+			echo $(bc <<< 'scale=10; '$TOTAL_SIZE'/1024^6')" EB"
+			;;
+		* )
+			echo -e "SizeFilesOlderThan bad argument in UNIT, use B,KB,MB,GB,TB,PB or EB"
+			exit 1
+			;;
+	esac
+
+	unset UNIT i
+}
