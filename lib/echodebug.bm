@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -gr ECHODEBUG_VERSION=2.0
+declare -gr ECHODEBUG_REVISION=2
+
+NORMAL="\033[0m"
+YELLOW="\033[33m"
+RED="\033[31m"
+
+function EchoDebug()
+{
+	function EchoDebug_help()
+	{
+		echo -e "
+EchoDebug version $ECHODEBUG_VERSION
+
+Usage:
+
+If you want, set Debug level as described as below:
+
+  \$1: Debug level where message is printed <optional>
+    Debug Levels:
+    0:  Info Debug
+    1:  Technical debug mode
+    2:  Developpment debug mode
+
+  \$2: Debug message to print
+
+Info: This function is installed in $(pwd)/$(basename "$(echo "$0")") on your system.
+"
+	}
+
+	function EchoDebug_badarg()
+	{
+		echo -e "\nBad argument \"$1\" in EchoDebug() call:"
+		EchoDebug_help
+		exit 1
+	}
+
+	declare	DEBUGLEVELS=(INFO TECH DEV)
+
+	if [[ -z $DEBUGLEVEL ]];then
+	{
+		DEBUGLEVEL=0
+	};fi
+
+	if [[ -z $LOGFILE ]];then
+		{
+			echo -e "[$RED""WARNING$NORMAL]: \$LOGFILE not declared in main program."
+		};fi
+
+	if [[ -z "$1" ]] ;then
+		{
+			EchoDebug_badarg $1
+		}
+	elif ! [[ "$1" =~ ^-?[0-9]+$ ]] && [[ -n $2 ]];then
+		{
+			echo -e "\nWrong debug level \"$1\" for message \"$2\" in LogThis() call:\n"
+			EchoDebug_help
+			exit 1
+		}
+	elif [[ $1 =~ ^-?[0-9]+$ ]];then
+		{
+			if [[ "$1" -gt 2 ]];then
+				{
+					EchoDebug_badarg $1
+				}
+			else
+				{ #Good explicit Debug Level
+					if [[ $DEBUGLEVEL -ge $1 ]];then
+					{
+						echo -e "[$YELLOW""DEBUG ${DEBUGLEVELS[$1]}$NORMAL]: $2"
+						if [[ -n $LOGFILE ]];then
+						{
+							echo -e "$(date '+%Y')$(date '+%m')$(date '+%d')_$(date '+%H')$(date '+%M')$(date '+%S'): [DEBUG ${DEBUGLEVELS[$1]}]: $2" >>$LOGFILE
+						};fi
+					};fi
+				};fi
+		}
+	else
+		{ #Good implicit Debug Level
+			echo -e "[$YELLOW""DEBUG INFO$NORMAL]: $1"
+			if [[ -n $LOGFILE ]];then
+			{
+				echo -e "$(date '+%Y')$(date '+%m')$(date '+%d')_$(date '+%H')$(date '+%M')$(date '+%S'): [DEBUG INFO]: $1" >>$LOGFILE
+			};fi
+		}; fi
+}
