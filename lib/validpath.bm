@@ -1,0 +1,61 @@
+
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -gr VALIDPATH_VERSION=1.0
+declare -gr VALIDPATH_REVISION=1
+
+function ValidPath_help()
+{
+	cat <<EOF
+ValidPath help:
+Used to valid and correct absolute path's syntax and avoid trailer missing or double.
+
+Usage:
+ValidPath <ABSOLUTE_PATH_TO_VALID>
+
+EOF
+}
+
+function ValidPath_badarg()
+{
+  echo -e "Bad argument \"$1\" in ValidPath() call in $(pwd)/$(basename "$(echo "$0")")\n"
+  ValidPath_help
+  exit 1
+}
+
+function ValidPath()
+{
+	if [[ -z $1 ]]; then
+		ValidPath_badarg "\$1"
+	else
+		PATHTOVALIDATE=${1}
+	fi
+
+
+	if [[ ! "${PATHTOVALIDATE}" =~ ^\/+ ]]; then
+		PATHTOVALIDATE=$(echo "/${PATHTOVALIDATE}")
+	fi
+
+	# DIR_EXPORT=$(echo "${TARGET_PATH}" |awk -F "/" '{print $2}')
+
+	if [[ "${PATHTOVALIDATE}" =~ \/\/ ]]; then
+		PATHTOVALIDATE=$(echo $PATHTOVALIDATE | sed 's,\/\/,\/,g')
+	fi
+
+	# if [[ ! ${PATHTOVALIDATE} =~ ^[0-9]+$ ]]; then
+	# 	echo -e "${TARGET_PATH} ne commence pas par un chiffre"
+	# fi
+
+	# if [[ ! ${DIR_EXPORT} =~ ^[a-z]+$ ]]; then
+	# 	echo -e "${TARGET_PATH} ne commence pas par une lettre"
+	# fi
+
+	# if [[ ! "${TARGET_PATH}" =~ ^*.\/ ]]; then
+	# 	echo -e "${TARGET_PATH} ne termine pas par un /"
+	# fi
+
+	echo ${PATHTOVALIDATE}
+}
