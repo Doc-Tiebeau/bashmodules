@@ -29,13 +29,18 @@ function CheckLib()
 		CheckLib_help
 	fi
 	if [[ -z $1 ]]; then
-		echo "ERROR: In checklib call: LIB_NAME is empty"
+		echo "ERROR: In checklib call: LIB_NAME parameter is empty"
 		CheckLib_help
 	else
 		LIB_NAME=$1
 		LIB_FILE="${LIB_NAME}.bm"
 	fi
-	
+
+	if [[ ! -e $"LIB_FILE" ]]; then
+		echo "ERROR: In checklib call: $LIB_FILE doesn't exist in $LIB_DIR"
+		exit 1
+
+	fi
 	#search for version
 	LIB_VERSION_TARGET=$2
 	if [[ -n $LIB_VERSION_TARGET ]] ;then
