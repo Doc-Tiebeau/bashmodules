@@ -81,7 +81,7 @@ function IncludeLib_file()
 		fi
 		# charging lib if the version number is at least the spotted in call ($3)
 		if [[ $(echo "$LIB_VERSION_FOUND >= $LIB_VERSION_TARGET" |bc) == 1 ]]; then
-			source	$LIB_DIR/$LIB_FILE
+			source	${LIB_DIR}/${LIB_FILE}
 		else
 			echo "Error, version of $LIB_NAME is to old ($LIB_VERSION_FOUND), please install at least version $LIB_VERSION_TARGET"
 			exit 1
