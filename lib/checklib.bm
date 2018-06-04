@@ -36,7 +36,7 @@ function CheckLib()
 		LIB_FILE="${LIB_NAME}.bm"
 	fi
 
-	if [[ ! -e $"LIB_FILE" ]]; then
+	if [[ ! -f "${LIB_DIR}/${LIB_FILE}" ]]; then
 		echo "ERROR: In checklib call: $LIB_FILE doesn't exist in $LIB_DIR"
 		exit 1
 
