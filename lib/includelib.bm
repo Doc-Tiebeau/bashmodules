@@ -106,7 +106,12 @@ function IncludeLib()
 			;;
 
 		*)
-			IncludeLib_help
+			# force version to 0 for retro-compatibility
+			if [[ -n $1 ]]; then
+				IncludeLib_file $1 "0"
+			else
+				IncludeLib_help
+			fi
 			;;
 	esac
 }
