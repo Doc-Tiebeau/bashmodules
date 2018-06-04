@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -gr FILEPARSE_VERSION=2.2
+declare -gr FILEPARSE_REVISION=1
+
+function FileParse_help()
+{
+	echo -e "
+
+USAGE:
+
+	\$1: File to parse
+	\$2: Variable name to be filled with the return value
+
+Info: This function is installed in $(pwd)/$(basename "$(echo "$0")") on your system.
+
+			"
+	exit 1
+}
+
+function FileParse()
+{
+	if [[ ! -f "$1" ]] ;then
+		echo "ERROR: File $1 doesn't exists"
+		FileParse_help
+	elif [[ -z "$2" ]]; then
+		echo "ERROR: Variable to find in \$2 is missing in call"
+	fi
+
+declare DONE="false"
+
+	until $DONE ; do
+
+		read confline || DONE=true
+
+			if [ -z "$confline" ] || [ "$(echo "$confline" | grep "#")" ] || [ $(echo $2) != $(echo "$confline" | awk -F'=' {'print $1'}) ]; then
+			{
+				continue
+			}
+			fi
+			
+			declare -i NBARGS=$(echo "$confline" | awk -F'=' {'print $2'} | awk {'print NF'})
+			local LISTVALUE=$(echo "$confline" | awk -F'=' {'print $2'})
+			
+			if [ $NBARGS -le 0 ]; then
+			{
+				continue
+			}
+			elif [ $NBARGS -eq 1 ]; then
+			{
+				eval $(echo $2)=$LISTVALUE
+				continue
+				# break
+			}
+			elif [ $NBARGS -gt 1 ]; then
+			{
+				declare -i ARGNUM=0
+				while [ $ARGNUM -lt $NBARGS ]; do
+				{	
+					declare -i VALUENUM=$((ARGNUM+1))
+					eval $(echo $2)[$ARGNUM]=$(echo "$LISTVALUE" | awk '{print $"'$VALUENUM'"}')
+					((ARGNUM++))
+				}
+				done
+				continue
+			};fi
+	done < $1
+
+	if [[ -z $NBARGS ]] || [[ $NBARGS == 0 ]]; then
+		echo -e "ERROR: Variable $2 is not defined in $1"
+		echo -e "Exiting"
+		exit 1
+	fi
+}
