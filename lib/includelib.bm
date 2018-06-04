@@ -64,7 +64,6 @@ function IncludeLib_file()
 	if [[ -n $LIB_VERSION_TARGET ]] ;then
 		while read line; do
 			if [[ $line == *"declare"*"${LIB_NAME^^}_VERSION="* ]]; then
-				echo "[DEBUG]: LibLine=$line"
 				LIB_VERSION_FOUND=$(echo $line | awk -F "=" '{print $NF}')
 			fi
 			# Todo integrate release check without using bc which naturaly allows one comma
