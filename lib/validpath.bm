@@ -39,23 +39,9 @@ function ValidPath()
 		PATHTOVALIDATE=$(echo "/${PATHTOVALIDATE}")
 	fi
 
-	# DIR_EXPORT=$(echo "${TARGET_PATH}" |awk -F "/" '{print $2}')
-
 	if [[ "${PATHTOVALIDATE}" =~ \/\/ ]]; then
 		PATHTOVALIDATE=$(echo $PATHTOVALIDATE | sed 's,\/\/,\/,g')
 	fi
-
-	# if [[ ! ${PATHTOVALIDATE} =~ ^[0-9]+$ ]]; then
-	# 	echo -e "${TARGET_PATH} ne commence pas par un chiffre"
-	# fi
-
-	# if [[ ! ${DIR_EXPORT} =~ ^[a-z]+$ ]]; then
-	# 	echo -e "${TARGET_PATH} ne commence pas par une lettre"
-	# fi
-
-	# if [[ ! "${TARGET_PATH}" =~ ^*.\/ ]]; then
-	# 	echo -e "${TARGET_PATH} ne termine pas par un /"
-	# fi
 
 	echo ${PATHTOVALIDATE}
 }
