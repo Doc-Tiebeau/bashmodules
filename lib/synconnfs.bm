@@ -1,0 +1,99 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -gr SYNCONNFS_VERSION=1.0
+declare -gr SYNCONNFS_REVISION=1
+
+if [[ -z $CHECKLIB_VERSION ]]; then
+  echo "[ERROR]: SyncOnNfs $SYNCONNFS_VERSION needs checklib. Exiting"
+  exit 1
+fi
+
+CheckLib setdatetime 1.1
+CheckLib logthis 2.3
+CheckLib echodebug
+CheckLib fileparse 2.1
+CheckLib nfstargetcheck 1.0
+
+function SyncOnNfs_help()
+{
+	echo -e "
+SyncOnNfs version $SYNCONNFS_VERSION.SYNCONNFS_REVISION
+
+SyncOnNfs requires at least nfs-common and rsync packages to be installed.
+
+SyncOnNFS is a tool that manage creating temporary mount point, syncing (with rsync)
+
+Usage:
+
+  \$1: Complete FQDN nfs export path (ie: server.domain.local:/export/path)
+
+  \$2: Directory, List of file or single file to sync.
+
+Info: SyncOnNfs called in $(pwd)/$(basename "$(echo "$0")").
+"
+	exit 0
+}
+
+function SyncOnNfs_badarg()
+{
+  echo -e "Bad argument \"$1\" in SyncOnNfs() call in $(pwd)/$(basename "$(echo "$0")")\n"
+  SyncOnNfs_help
+  exit 1
+}
+
+function SyncOnNfs()
+{
+
+
+  LogThis 2 0 "Starting of SyncOnNfs"
+  #Initialize things uses date ....
+  SetDateTime
+  local MOUNT_DIRECTORY="/mnt/spa-backup_$DATENANO/"
+
+  #Checking for nfs  Target
+  NfsTargetCheck $BACKUP_HOST $BACKUP_EXPORT
+
+  #Creating mount directory
+  if [[ ! -d "$MOUNT_DIRECTORY" ]]; then
+    LogThis 2 0 "Temporary mount point creation at ${MOUNT_DIRECTORY}"
+    mkdir -p "$MOUNT_DIRECTORY" && {
+      LogThis 2 0 "Creating of temporary mount point at ${MOUNT_DIRECTORY} success"
+    } || {
+      LogThis 0 3 "Creating of temporary mount point at ${MOUNT_DIRECTORY} failed, unable to continue"
+      exit 1
+    }
+  fi
+
+  #Mounting nfs target
+  mount -t nfs ${BACKUP_HOST}:${BACKUP_PATH} "${MOUNT_DIRECTORY}" && {
+    LogThis 1 0 "NFS mount of ${BACKUP_HOST}:${BACKUP_PATH} success"
+  } || {
+    LogThis 0 3 "NFS mount of ${BACKUP_HOST}:${BACKUP_PATH} FAILED !, unable to continue"
+    exit 1
+  }
+
+  df -h ${MOUNT_DIRECTORY}
+
+  #Calculate the size of the file(s) to send
+  # TODO
+
+  #Calculate size availabale on the target
+  # TODO
+
+  # Do backup only if mount is realy effective
+  # TODO
+
+  # Do cleaning if parameters are define in pgbckfile.
+
+  # Safe umount and RM
+  # TODO in a new bashmodule
+
+  umount $MOUNT_DIRECTORY && rm -rf $MOUNT_DIRECTORY
+
+  EchoDebug 0 "Debug Exiting"
+  exit 1
+
+}

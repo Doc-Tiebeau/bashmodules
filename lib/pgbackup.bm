@@ -1,0 +1,221 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -gr PGBACKUP_VERSION=1.0
+declare -gr PGBACKUP_REVISION=1
+
+if [[ -z $CHECKLIB_VERSION ]]; then
+	echo "[ERROR]: PgBackup $PGBACKUP_VERSION needs checklib. Exiting"
+	exit 1
+fi
+
+CheckLib fileparse 2.1
+CheckLib echodebug
+CheckLib setdatetime 1.1
+CheckLib synconnfs 1.0
+
+function PgBackup_help()
+{
+	echo -e "
+pgbackup version $PGBACKUP_VERSION
+
+Usage:
+
+...TODO..
+
+  \$1: <ARG_1>
+
+  \$2: <ARG_2>
+  "
+	exit 0
+}
+
+function PgBackup_local()
+{
+	if [[ ! -f $1 ]]; then
+		PGBCK_FILE=${CONFIG_DIR}/$1
+	else
+		echo "ERROR in pgbackup_local call: PGBCK_FILE is missing in $CONFIG_DIR"
+	fi
+
+	FileParse $PGBCK_FILE SOURCE_BACKUP_DIRECTORY
+	FileParse $PGBCK_FILE SOURCE_DB_NAME
+	FileParse $PGBCK_FILE SOURCE_BACKUP_DIRECTORY
+
+	SetDateTime
+
+	FileParse $PGBCK_FILE BACKUP_FILENAME
+
+	if [[ $BACKUP_FILENAME == auto ]]; then
+		BACKUP_FILENAME="${SOURCE_DB_NAME}_${DATETIME}.sql"
+		EchoDebug 1 "Backup file name set to \"auto\" replaced by $BACKUP_FILENAME"
+	fi
+
+	if [[ ! -d $SOURCE_BACKUP_DIRECTORY ]]; then
+		LogThis 0 3 "[ERROR]: Local backup directory $SOURCE_BACKUP_DIRECTORY doesn't exist."
+		EchoDebug 0 "[ERROR]: Local backup directory $SOURCE_BACKUP_DIRECTORY doesn't exist. Exiting."
+		exit 1
+	else
+		cd $SOURCE_BACKUP_DIRECTORY
+	fi
+	EchoDebug 2 "SOURCE_BACKUP_DIRECTORY=$SOURCE_BACKUP_DIRECTORY"
+
+	FileParse $PGBCK_FILE SOURCE_DB_USER
+	FileParse $PGBCK_FILE BACKUP_COMPRESSION_FACTOR
+	FileParse $PGBCK_FILE SOURCE_HOST_LOGIN
+	FileParse $PGBCK_FILE BACKUP_COMPRESSION_FACTOR
+
+	EchoDebug 2 "SOURCE_HOST_LOGIN=$SOURCE_HOST_LOGIN"
+
+	su $SOURCE_HOST_LOGIN --command "\
+	pg_dump --format plain \
+	--dbname=${SOURCE_DB_NAME} \
+	" \
+	| gzip -c9 > "${BACKUP_FILENAME}.gz" \
+	|| {
+	LogThis 0 3 "Database '$SOURCE_DB_NAME' dumping failed using host login '$SOURCE_HOST_LOGIN' and postgres-user '$SOURCE_DB_USER'"
+	EchoDebug 0 "Database '$SOURCE_DB_NAME' dumping failed using host login '$SOURCE_HOST_LOGIN' and postgres-user '$SOURCE_DB_USER'"
+	exit 1
+	}
+
+	md5sum ${BACKUP_FILENAME}.gz > ${BACKUP_FILENAME}.md5
+	md5sum --status --check ${BACKUP_FILENAME}.md5 && {
+		LogThis 0 0 "MD5 hash verfification SUCCESSFULL."
+		EchoDebug 1 "MD5 hash verfification SUCCESSFULL."
+	} || {
+		LogThis 0 3 "MD5 hash verfification FAILED."
+		EchoDebug 0 "MD5 hash verfification FAILED."
+	}
+
+	# TODO:
+	#
+	# 		PGDUMP_POST=" \
+	# <SOME PGSQL instruction>
+	# "
+	# if [[ -n ${PGDUMP_POST} ]]; then
+	# 	PGDUMP_POST_FILE="${SOURCE_DB_NAME}_${DATETIME}_POST.sql"
+	# 	echo -e "${PGDUMP_POST}" > ${PGDUMP_POST_FILE}
+	# 	tar -cjf ${BACKUP_FILENAME}.tar.bz2 ${BACKUP_FILENAME} ${PGDUMP_POST_FILE} && {
+	# 		md5sum ${BACKUP_FILENAME}.tar.bz2
+	# 	}
+	# else
+	# 	tar -cjf ${BACKUP_FILENAME}.tar.bz2 ${BACKUP_FILENAME}
+	# fi
+
+
+	if [ -e "$BACKUP_FILENAME" ] ;
+	then
+		EchoDebug 0 "Previous backup with the same name found ($SOURCE_BACKUP_DIRECTORY/$BACKUP_FILENAME). It happens when spa-backup has been launched two times simultaneously."
+		LogThis 0 3 "Previous backup with the same name found ($SOURCE_BACKUP_DIRECTORY/$BACKUP_FILENAME). It happens when spa-backup has been launched two times simultaneously."
+		exit 1
+	fi
+
+	EchoDebug 1 "Database $SOURCE_DB_NAME dumped to $SOURCE_BACKUP_DIRECTORY/$BACKUP_FILENAME."
+	LogThis 0 0 "Database $SOURCE_DB_NAME successfully dumped to $SOURCE_BACKUP_DIRECTORY/$BACKUP_FILENAME."
+}
+
+function PgBackup()
+{
+	case $1 in
+		-l|--local )
+			PgBackup_local $2
+			PgBackup_sync
+			;;
+		-h|--help )
+			PgBackup_help
+			;;
+		* )
+			Echo "ERROR in pgbackup call please refer to help"
+			PgBackup_help
+			;;
+	esac
+}
+
+
+#PgBackup is not really postgreSQL specific but synconnfs.bm
+###
+# TODO refactor and extract in bashmodules for generic use and re-use
+function PgBackup_sync ()
+{
+
+	# Sourcing Parameters
+	FileParse $PGBCK_FILE BACKUP_HOST
+	#The BACKUP_EXPORT is the root export shown in showmount -e result
+	FileParse $PGBCK_FILE BACKUP_EXPORT
+	#The BACKUP_PATH is the path with BACKUP_EXPORT considered as root
+	FileParse $PGBCK_FILE BACKUP_PATH
+
+	SyncOnNfs "${BACKUP_HOST}:${BACKUP_EXPORT}/${BACKUP_PATH}"
+
+	EchoDebug 0 "Debug Exiting"
+		exit 1
+
+	# rsync -rlptv --delete "$BACKUP_PATH/database" "$MOUNT_DIRECTORY"
+	# rsync -rlptv "$BACKUP_PATH/logs" "$MOUNT_DIRECTORY"
+	# umount "$MOUNT_DIRECTORY"
+}
+
+function PgBackup_clean
+{
+	local DB_BACKUP_DIR="/data/backup/database"
+	local DAYS_TO_KEEP=3
+	local MONTH_TO_KEEP=3
+	local DRY_RUN=0
+	local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+
+	if [ "$#" -ne 1 ]; then
+	  echo "Usage: $0 PREFIX" >&2
+	  exit 1
+	else
+		DATABASE_BACKUP_PREFIX=$1
+	fi
+
+
+	# build archives list to keep
+	archive_dates_to_keep=()
+	for i in $(seq 0 $DAYS_TO_KEEP);
+	do
+		date_to_keep=$(date --date="$i days ago" '+%Y%m%d')
+		archive_dates_to_keep+=($date_to_keep)
+	done
+
+	for i in $(seq 0 $MONTH_TO_KEEP);
+	do
+		date_to_keep=$(date --date="$i month ago" '+%Y%m01')
+		archive_dates_to_keep+=($date_to_keep)
+	done
+
+
+	# loop on archive to check which file must be deleted
+	pushd "$DB_BACKUP_DIR" &> /dev/null
+	backup_files=$(find $DB_BACKUP_DIR/ -name "$DATABASE_BACKUP_PREFIX*gz")
+	for backup_file in $backup_files ;
+	do
+		tmp_filename=$(basename $backup_file .sql.gz)
+		#extract date
+		backup_filedate=${tmp_filename#$DATABASE_BACKUP_PREFIX}
+		archive_to_delete=1
+		for date_to_keep in "${archive_dates_to_keep[@]}";
+		do
+			if [ $backup_filedate -eq $date_to_keep ] ;
+			then
+				archive_to_delete=0;
+			fi
+		done
+
+		if [ $archive_to_delete -eq 1 ];
+		then
+			echo "$timestamp Info: Remove the archive $backup_file.";
+			if [ $DRY_RUN -eq 0 ];
+			then
+				rm "$backup_file"
+			fi
+		else
+			echo "$timestamp Info: Keep the archive $backup_file.";
+		fi
+	done
+	popd &> /dev/null
+
+}

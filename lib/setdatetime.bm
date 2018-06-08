@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -gr SETDATETIME_VERSION=1.1
+declare -gr SETDATETIME_REVISION=2
+
+function SETDATETIME()
+{
+	# To preserve compatiblity with previsous version tha 1.1
+	SetDateTime
+	DATETIME=$DATEJOUR"_"$TIMENOW
+	DATETIME_H=${DATEJOUR}"_"${TIMENOW_H}
+	TIMENOW=${TIMENOW_H}
+	DATETIME=${DATETIME_H}
+}
+
+function  SetDateTime()
+{
+	JOUR=$(date '+%d')
+	MOIS=$(date '+%m')
+	ANNEE=$(date '+%Y')
+	SEMAINE=$(date '+%V')
+	JOURSEMAINE=$(date '+%u')
+	HEURE=$(date '+%H')
+	MINUTE=$(date '+%M')
+	SECONDE=$(date '+%S')
+	NANOSECONDE=$(date '+%N')
+	TIMENOW=${HEURE}${MINUTE}${SECONDE}
+	# _H are humanreadable of previsous version before 1.1
+	TIMENOW_H=$HEURE"h"$MINUTE"m"$SECONDE"s"
+	DATEJOUR=$ANNEE$MOIS$JOUR
+	DATETIME=$DATEJOUR"-"$TIMENOW
+	DATETIME_H=${DATEJOUR}"-"${TIMENOW_H}
+	DATENANO=$DATEJOUR"_"$NANOSECONDE
+}
