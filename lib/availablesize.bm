@@ -1,0 +1,123 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -r SIZEAVAILABLE_VERSION=1.0
+declare -r SIZEAVAILABLE_REVISION=2
+
+function AvailableSize_help()
+{
+	cat <<EOF
+AvailableSize Help:
+
+Used to calculate the avalable size in a destination (local or mounted directory):
+
+	Usage:
+
+SizeAvailable <Directory> <Size_Available>[unit]
+
+Units available for size checks are
+		B  = Bytes
+		KB = KiloBytes
+		MB = MegaBytes
+		GB = GygaBytes
+		TB = TerraBytes
+		PB = PetaBytes
+		EB = ExaBytes
+
+Return 0 if at least <Size_Available> is free.
+Else return 1
+
+example:
+
+AvailableSize /tmp/dir 3GB
+
+EOF
+}
+
+function AvailableSize_badarg()
+{
+  echo -e "Bad argument \"$1\" in AvailableSize() call in $(pwd)/$(basename "$(echo "$0")")\n"
+  AvailableSize_help
+  exit 1
+}
+
+function AvailableSize()
+{
+	if [[ -z $1 ]]; then
+		AvailableSize_badarg $1
+	elif [[ -z $2 ]]; then
+		AvailableSize_badarg $2
+	fi
+
+if [[ -d $1 ]]; then
+	local TARGET_PATH="$1"
+else
+	echo "$1 directory doesn't exists, exiting"
+	exit 1
+fi
+
+local SIZE=$2
+
+#comma protection change
+if [[ $SIZE =~ ',' ]]; then
+	SIZE=$(echo $SIZE | sed 's/,/./g')
+fi
+
+if [[ -z $3 ]]; then
+	#UNIT isolation
+	if [[ $SIZE =~ '.' ]]; then
+		local UNIT=$(echo $SIZE | sed --regexp-extended 's/[0-9]+.[0-9]+//')
+	else
+		local UNIT=$(echo $SIZE | sed --regexp-extended 's/[0-9]+//')
+	fi
+elif [[ $3 =~ ^(B|KB|MB|GB|TB|PB|EB)$ ]]; then
+	local UNIT=$3
+else
+	AvailableSize_badarg $3
+fi
+
+#SIZE only isolation
+SIZE=$(echo $SIZE | sed --regexp-extended 's/[A-Z]+//')
+
+#BYTES unit conversion
+case $UNIT in
+	B )
+		echo "nothing to do" >> /dev/null
+		;;
+	KB )
+		SIZE=$(bc <<< 'scale=3; '$SIZE'*1024')
+		;;
+	MB )
+		SIZE=$(bc <<< 'scale=3; '$SIZE'*1024^2')
+		;;
+	GB )
+		SIZE=$(bc <<< 'scale=6; '$SIZE'*1024^3')
+		;;
+	TB )
+		SIZE=$(bc <<< 'scale=6; '$SIZE'*1024^4')
+		;;
+	PB )
+		SIZE=$(bc <<< 'scale=8; '$SIZE'*1024^5')
+		;;
+	EB )
+		SIZE=$(bc <<< 'scale=10; '$SIZE'*1024^6')
+		;;
+	* )
+		echo -e "AvailableSize bad argument in UNIT, use B,KB,MB,GB,TB,PB or EB"
+		exit 1
+		;;
+esac
+
+local AVAILABLE=$(df ${TARGET_PATH} | grep --regexp=^\/ | awk -F " " '{print $4}')
+#conversion from KB (output of df) to B
+AVAILABLE=$(bc <<< 'scale=6; '$AVAILABLE'*1024')
+
+if [[ "$(echo "${AVAILABLE} > ${SIZE}" | bc -l)" == "1" ]]; then
+	echo "0"
+else
+	echo "1"
+fi
+
+}
