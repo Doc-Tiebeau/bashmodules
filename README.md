@@ -8,4 +8,5 @@ Bash "libraries" which helps admins to format their scripts and limitate maintai
 * __fileparse.bm:__ Parse file to search variable declaration and declare it (ie. for config files).
 * __filessize.bm:__ Calculate the total size of a list of files and/or directories.
 * __includelib.bm:__ Librarie to include the others
+* __nfstargetcheck.bm:__ Check if an nfs server is exporting specified directory
 * __validpath.bm:__ Format path for linux and avoid trailer missing or double

@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
+# License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
+
+declare -gr NFSTARGETCHECK_VERSION=1.0
+declare -gr NFSTARGETCHECK_REVISION=2
+
+if [[ -z $CHECKLIB_VERSION ]]; then
+  echo "[ERROR]: NfsTargetCheck $NFSTARGETCHECK_VERSION needs checklib. Exiting"
+  exit 1
+fi
+
+CheckLib logthis 2.3
+
+function NfsTargetCheck_help()
+{
+	echo -e "
+NfsTargetCheck version $NFSTARGETCHECK_VERSION.NFSTARGETCHECK_REVISION
+
+Usage:
+
+  \$1: Destination host <hostname> or <IP>
+
+  \$2: Directory which has to be exported with nfs
+
+Info: This function is called in $(pwd)/$(basename "$(echo "$0")").
+"
+}
+
+function NfsTargetCheck_badarg()
+{
+  echo -e "Bad argument \"$1\" in NfsTargetCheck() call:\n"
+  NfsTargetCheck_help
+  exit 1
+}
+
+function NfsTargetCheck()
+{
+
+  # Check destination host
+  if [[ -z  $1 ]]; then
+      NfsTargetCheck_badarg $1
+  elif [[ -z $2 ]]; then
+      NfsTargetCheck_badarg $2
+  else
+    DEST_HOST="${1}"
+    DEST_EXPORT="${2}"
+  fi
+
+  LogThis 2 0 "Target host "$DEST_HOST" checking"
+
+  DEST_HOST_UNREACHABLE=$(ping -c 4 $DEST_HOST 1>/dev/null; echo $?)
+
+  if [[ "${DEST_HOST_UNREACHABLE}" == "1" ]]; then
+      LogThis 0 3 "Destination host $DEST_HOST unreachable, unable to continue."
+      exit 1
+  elif [[ ! $(showmount -e ${DEST_HOST} | grep --regexp="^${DEST_EXPORT}" ) ]]; then
+      LogThis 0 3 "NFS export $DEST_EXPORT not present on the destination host $DEST_HOST, unable to continue."
+      exit 1
+  else
+    LogThis 2 0 "Target host "$DEST_HOST" and export "$DEST_EXPORT" succesfully checked"
+    echo 0
+  fi
+}
