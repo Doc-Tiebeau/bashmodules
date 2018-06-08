@@ -70,7 +70,7 @@ function FilesSize()
 
 	case $UNIT in
 		B )
-			echo "$TOTAL_SIZE"" B"
+			echo "$TOTAL_SIZE"
 			;;
 		KB )
 			echo $(bc <<< 'scale=3; '$TOTAL_SIZE'/1024')" KB"
