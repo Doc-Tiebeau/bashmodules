@@ -43,7 +43,7 @@ function FilesSize()
 	TOTAL_SIZE=0
 	i=1
 
-	if [[ ${1} == "-u" || ${1} == "--unit" ]] && [[ ${2} =~ (^B|KB|MB|GB|TB|PB|EB) ]]; then
+	if [[ ${1} == "-u" || ${1} == "--unit" ]] && [[ ${2} =~ ^(B|KB|MB|GB|TB|PB|EB) ]]; then
 		i=3
 		UNIT=${2}
 	fi
