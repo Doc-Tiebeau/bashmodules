@@ -11,7 +11,7 @@ function CheckLib_help
 	echo -e "
 Usage:
 
-CheckLib <LIB_NAME> <version
+CheckLib <LIB_NAME> <version>
 
   \$1: Library name
 
