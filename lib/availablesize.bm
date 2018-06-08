@@ -3,8 +3,8 @@
 # Author: Elie SAINT-FELIX (alias Doc_Tiebeau)
 # License: GPL-V3.0 https://github.com/Doc-Tiebeau/bashmodules
 
-declare -r SIZEAVAILABLE_VERSION=1.0
-declare -r SIZEAVAILABLE_REVISION=2
+declare -r AVAILABLESIZE_VERSION=1.0
+declare -r AVAILABLESIZE_REVISION=2
 
 function AvailableSize_help()
 {
