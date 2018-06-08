@@ -34,6 +34,7 @@ function ValidPath()
 		PATHTOVALIDATE=${1}
 	fi
 
+
 	if [[ ! "${PATHTOVALIDATE}" =~ ^\/+ ]]; then
 		PATHTOVALIDATE=$(echo "/${PATHTOVALIDATE}")
 	fi
