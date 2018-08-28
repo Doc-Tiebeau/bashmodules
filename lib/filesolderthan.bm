@@ -1,0 +1,170 @@
+
+
+#! /bin/bash
+
+declare -r FILESOLDERTHAN_VERSION="0.3"
+declare -r FILESOLDERTHAN_REVISION="1"
+
+
+#Todo refactor to protect argument parsing with standard option parsing like following:
+
+# while test $# -gt 0
+# do
+#     case "$1" in
+#         --opt1) echo "option 1"
+#             ;;
+#         --opt2) echo "option 2"
+#             ;;
+#         --*) echo "bad option $1"
+#             ;;
+#         *) echo "argument $1"
+#             ;;
+#     esac
+#     shift
+# done
+
+
+function CountFilesOlderThan_Help ()
+{
+	cat <<EOF
+CountFilesOlderThan Help:
+	
+	Usage:
+	
+		CountFilesOlderThan <Maximum Age> [Maximum Depth] <Destination Dir>
+
+	Parameters:
+
+		Maximum Age:			Integer represents n*24 hours
+
+		Maximum Depth:			Interger (min|default=1) (optionnal)
+
+		Destination Directory:		Directory where count is made
+
+EOF
+
+}
+
+function ListFilesOlderThan_Help ()
+{
+	cat <<EOF
+ListFilesOlderThan Help:
+
+	Usage:
+	
+		ListFilesOlderThan <Maximum Age> [Maximum Depth] <Destination Dir>
+
+	Parameters:
+
+		Maximum Age:			Integer represents n*24 hours
+
+		Maximum Depth:			Interger (min|default=1) (optionnal)
+
+		Destination Directory:		Directory from where the list is extracted.
+
+EOF
+}
+
+function SizeFilesOlderThan_Help ()
+{
+	cat <<EOF
+SizeFilesOlderThan Help:
+
+	Usage:
+	
+		SizeFilesOlderThan <Maximum Age> [Maximum Depth] <Size Unit> <Destination Dir>
+
+	Parameters:
+
+		Maximum Age:			Integer represents n*24 hours
+
+		Maximum Depth:			Interger (min|default=1) (optionnal)
+
+		Destination Directory:		Directory from where the list is extracted.
+
+		Size Unit:			B  = Bytes (Octets for french guys...)
+						KB = KiloBytes
+						MB = MegaBytes
+						GB = GygaBytes
+						TB = TerraBytes
+						PB = PetaBytes
+						EB = ExaBytes
+
+EOF
+}
+
+
+function CountFilesOlderThan ()
+{
+	local MAX_AGE="$1"
+	local MAX_DEPTH="$2"
+	local DEST_DIR="$3"
+
+	if [[ -z $MAX_DEPTH ]];then
+		{
+			MAX_DEPTH="1"
+		}
+	fi
+	find "$DEST_DIR" -maxdepth "$MAX_DEPTH" -type f -mtime +"$MAX_AGE" | wc -l
+}
+
+function ListFilesOlderThan ()
+{
+	local MAX_AGE="$1"
+	local MAX_DEPTH="$2"
+	local DEST_DIR="$3"
+
+	if [[ -z $MAX_DEPTH ]];then
+		{
+			MAX_DEPTH="1"
+		}
+	fi
+	find "$DEST_DIR" -maxdepth "$MAX_DEPTH" -type f -mtime +"$MAX_AGE"
+}
+
+function SizeFilesOlderThan ()
+{
+	local MAX_AGE="$1"
+	local MAX_DEPTH="$2"
+	local UNIT="$3"
+	local DEST_DIR="$4"
+
+	local GIGA="1099511627776"
+
+	if [[ -z $MAX_DEPTH ]];then
+		{
+			MAX_DEPTH="1"
+		}
+	fi
+	# Using find -printf '%s\n' because true size, even block size like du or ls
+	SIZE_B=$(find "$DEST_DIR" -type f -mtime +"$MAX_AGE" -printf '%s\n' | awk '{total=total+$1}END{print total}')
+
+	case $UNIT in
+		B )
+			echo "$SIZE_B""B"
+			;;
+		KB )
+			echo $(bc <<< 'scale=3; '$SIZE_B'/1024')"KB"
+			;;
+		MB )
+			echo $(bc <<< 'scale=3; '$SIZE_B'/1024^2')"MB"
+			;;
+		GB )
+			echo $(bc <<< 'scale=6; '$SIZE_B'/1024^3')"GB"
+			;;
+		TB )
+			echo $(bc <<< 'scale=6; '$SIZE_B'/1024^4')"TB"
+			;;
+		PB )
+			echo $(bc <<< 'scale=8; '$SIZE_B'/1024^5')"PB"
+			;;
+		EB )
+			echo $(bc <<< 'scale=10; '$SIZE_B'/1024^6')"EB"
+			;;
+		* )
+			echo -e "SizeFilesOlderThan bad argument in UNIT, use B,KB,MB,GB,TB,PB or EB"
+			exit 1
+			;;
+	esac
+	
+}
